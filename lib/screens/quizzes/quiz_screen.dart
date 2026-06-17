@@ -29,151 +29,7 @@ class _QuizScreenState extends State<QuizScreen> {
         .replaceAll('/', '_');
   }
 
-  List<Map<String, dynamic>> getQuestions() {
-    switch (widget.skillTitle) {
-      case 'Flutter Development':
-        return [
-          {
-            'question': 'What is Flutter mainly used for?',
-            'options': [
-              'Building mobile apps',
-              'Editing videos',
-              'Managing databases',
-              'Designing logos',
-            ],
-            'answer': 'Building mobile apps',
-          },
-          {
-            'question': 'Which language is used with Flutter?',
-            'options': ['Java', 'Dart', 'Python', 'PHP'],
-            'answer': 'Dart',
-          },
-          {
-            'question': 'What is a widget in Flutter?',
-            'options': [
-              'A database table',
-              'A UI building block',
-              'A server file',
-              'A password tool',
-            ],
-            'answer': 'A UI building block',
-          },
-        ];
-
-      case 'Graphic Design':
-        return [
-          {
-            'question': 'What is typography related to?',
-            'options': ['Text style', 'Video editing', 'Coding', 'Database'],
-            'answer': 'Text style',
-          },
-          {
-            'question': 'Which is a basic design principle?',
-            'options': ['Balance', 'Compilation', 'Authentication', 'Routing'],
-            'answer': 'Balance',
-          },
-          {
-            'question': 'Color theory helps designers choose what?',
-            'options': [
-              'Good color combinations',
-              'Programming languages',
-              'File names',
-              'Passwords',
-            ],
-            'answer': 'Good color combinations',
-          },
-        ];
-
-      case 'English Communication':
-        return [
-          {
-            'question': 'Which is part of communication?',
-            'options': ['Speaking', 'Cooking', 'Driving', 'Painting'],
-            'answer': 'Speaking',
-          },
-          {
-            'question': 'Clear writing should be what?',
-            'options': [
-              'Simple and understandable',
-              'Confusing',
-              'Random',
-              'Too long',
-            ],
-            'answer': 'Simple and understandable',
-          },
-          {
-            'question': 'Listening helps you do what?',
-            'options': [
-              'Understand others',
-              'Ignore others',
-              'Avoid conversation',
-              'Forget information',
-            ],
-            'answer': 'Understand others',
-          },
-        ];
-
-      case 'Public Speaking':
-        return [
-          {
-            'question': 'What helps reduce stage fear?',
-            'options': [
-              'Practice',
-              'Avoiding speech',
-              'Speaking too fast',
-              'Looking away',
-            ],
-            'answer': 'Practice',
-          },
-          {
-            'question': 'Body language includes what?',
-            'options': ['Posture', 'Password', 'Database', 'Code editor'],
-            'answer': 'Posture',
-          },
-          {
-            'question': 'A good speech usually has what?',
-            'options': [
-              'Introduction, body, conclusion',
-              'Only conclusion',
-              'Only jokes',
-              'No structure',
-            ],
-            'answer': 'Introduction, body, conclusion',
-          },
-        ];
-
-      case 'Data Analysis':
-        return [
-          {
-            'question': 'Data analysis is used to find what?',
-            'options': [
-              'Patterns and insights',
-              'Passwords',
-              'Music beats',
-              'Screen size',
-            ],
-            'answer': 'Patterns and insights',
-          },
-          {
-            'question': 'Which tool is commonly used for basic data analysis?',
-            'options': ['Spreadsheet', 'Paint', 'Camera', 'Music player'],
-            'answer': 'Spreadsheet',
-          },
-          {
-            'question': 'Charts help show data how?',
-            'options': ['Visually', 'Secretly', 'Randomly', 'Silently'],
-            'answer': 'Visually',
-          },
-        ];
-
-      default:
-        return [];
-    }
-  }
-
-  void submitAnswer() {
-    final questions = getQuestions();
-
+  void submitAnswer(List<Map<String, dynamic>> questions) {
     if (selectedAnswer == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please select an answer')),
@@ -181,7 +37,9 @@ class _QuizScreenState extends State<QuizScreen> {
       return;
     }
 
-    if (selectedAnswer == questions[currentQuestionIndex]['answer']) {
+    final currentQuestion = questions[currentQuestionIndex];
+
+    if (selectedAnswer == currentQuestion['correctAnswer']) {
       score++;
     }
 
@@ -190,7 +48,7 @@ class _QuizScreenState extends State<QuizScreen> {
         quizFinished = true;
       });
 
-      saveQuizResult();
+      saveQuizResult(questions.length);
     } else {
       setState(() {
         currentQuestionIndex++;
@@ -199,13 +57,11 @@ class _QuizScreenState extends State<QuizScreen> {
     }
   }
 
-  Future<void> saveQuizResult() async {
+  Future<void> saveQuizResult(int totalQuestions) async {
     final user = FirebaseAuth.instance.currentUser;
-    final questions = getQuestions();
 
-    if (user == null || questions.isEmpty) return;
+    if (user == null || totalQuestions == 0) return;
 
-    final int totalQuestions = questions.length;
     final int percentage = ((score / totalQuestions) * 100).round();
 
     try {
@@ -260,7 +116,7 @@ class _QuizScreenState extends State<QuizScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final questions = getQuestions();
+    final skillId = getSkillId();
 
     return Scaffold(
       backgroundColor: const Color(0xFFF7F8FC),
@@ -276,11 +132,51 @@ class _QuizScreenState extends State<QuizScreen> {
           ),
         ),
       ),
-      body: questions.isEmpty
-          ? const Center(child: Text('No quiz available'))
-          : quizFinished
-              ? _buildResultView(questions.length)
-              : _buildQuestionView(questions),
+      body: StreamBuilder<QuerySnapshot>(
+        stream: FirebaseFirestore.instance
+            .collection('quiz_questions')
+            .doc(skillId)
+            .collection('questions')
+            .orderBy('createdAt', descending: false)
+            .snapshots(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(
+              child: CircularProgressIndicator(),
+            );
+          }
+
+          if (snapshot.hasError) {
+            return const Center(
+              child: Text('Failed to load quiz questions'),
+            );
+          }
+
+          final docs = snapshot.data?.docs ?? [];
+
+          if (docs.isEmpty) {
+            return const Center(
+              child: Text('No quiz questions added yet'),
+            );
+          }
+
+          final questions = docs.map((doc) {
+            final data = doc.data() as Map<String, dynamic>;
+
+            return {
+              'question': data['question'] ?? '',
+              'options': List<String>.from(data['options'] ?? []),
+              'correctAnswer': data['correctAnswer'] ?? '',
+            };
+          }).toList();
+
+          if (quizFinished) {
+            return _buildResultView(questions.length);
+          }
+
+          return _buildQuestionView(questions);
+        },
+      ),
     );
   }
 
@@ -360,7 +256,7 @@ class _QuizScreenState extends State<QuizScreen> {
                 borderRadius: BorderRadius.circular(16),
               ),
               child: ElevatedButton(
-                onPressed: submitAnswer,
+                onPressed: () => submitAnswer(questions),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.transparent,
                   shadowColor: Colors.transparent,

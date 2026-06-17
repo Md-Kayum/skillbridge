@@ -1,5 +1,6 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:skillbridge/screens/admin/admin_panel_screen.dart';
 import 'package:skillbridge/screens/home/home_screen.dart';
 import 'package:skillbridge/services/auth_service.dart';
 import '../../core/theme/app_colors.dart';
@@ -20,6 +21,8 @@ class _LoginScreenState extends State<LoginScreen> {
   final AuthService _authService = AuthService();
 
   bool isLoading = false;
+
+  final String adminEmail = 'admin@skill.com';
 
   @override
   void dispose() {
@@ -51,12 +54,21 @@ class _LoginScreenState extends State<LoginScreen> {
 
       if (!mounted) return;
 
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(
-          builder: (_) => const HomeScreen(),
-        ),
-      );
+      if (email.toLowerCase() == adminEmail) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (_) => const AdminPanelScreen(),
+          ),
+        );
+      } else {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (_) => const HomeScreen(),
+          ),
+        );
+      }
     } on FirebaseAuthException catch (e) {
       String message = 'Login failed';
 

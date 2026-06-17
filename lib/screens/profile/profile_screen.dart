@@ -1,5 +1,6 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:skillbridge/screens/admin/admin_panel_screen.dart';
 import 'package:skillbridge/screens/auth/login_screen.dart';
 
 class ProfileScreen extends StatelessWidget {
@@ -146,23 +147,37 @@ class ProfileScreen extends StatelessWidget {
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Column(
-                    children: const [
-                      _MenuItem(
+                    children: [
+                      const _MenuItem(
                         icon: Icons.person_outline,
                         title: 'Edit profile',
                       ),
-                      _MenuItem(
+                      const _MenuItem(
                         icon: Icons.history,
                         title: 'Study history',
                       ),
-                      _MenuItem(
+                      const _MenuItem(
                         icon: Icons.notifications_none,
                         title: 'Notifications',
                       ),
-                      _MenuItem(
+                      const _MenuItem(
                         icon: Icons.help_outline,
                         title: 'Help & Support',
                       ),
+
+                      if (email == 'kayum4125@gmail.com')
+                        _MenuItem(
+                          icon: Icons.admin_panel_settings,
+                          title: 'Admin Panel',
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => const AdminPanelScreen(),
+                              ),
+                            );
+                          },
+                        ),
                     ],
                   ),
                 ),
@@ -178,7 +193,9 @@ class ProfileScreen extends StatelessWidget {
                   child: OutlinedButton.icon(
                     onPressed: () async {
                       await FirebaseAuth.instance.signOut();
+
                       if (!context.mounted) return;
+
                       Navigator.pushAndRemoveUntil(
                         context,
                         MaterialPageRoute(
@@ -246,19 +263,28 @@ class _StatItem extends StatelessWidget {
 class _MenuItem extends StatelessWidget {
   final IconData icon;
   final String title;
+  final VoidCallback? onTap;
 
   const _MenuItem({
     required this.icon,
     required this.title,
+    this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
     return ListTile(
       contentPadding: EdgeInsets.zero,
-      leading: Icon(icon, color: const Color(0xFF4F46E5)),
+      onTap: onTap,
+      leading: Icon(
+        icon,
+        color: const Color(0xFF4F46E5),
+      ),
       title: Text(title),
-      trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+      trailing: const Icon(
+        Icons.arrow_forward_ios,
+        size: 16,
+      ),
     );
   }
 }
