@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 
 class QuizScreen extends StatefulWidget {
   final String skillTitle;
-
+ 
   const QuizScreen({
     super.key,
     required this.skillTitle,
